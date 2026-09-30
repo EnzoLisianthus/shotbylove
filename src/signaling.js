@@ -19,7 +19,7 @@ export class NtfySignaling extends EventTarget{
   constructor(secret){super();this.secret=secret;this.clientId=makeClientId();this.seq=0;this.source=null;this.topic="";this.opened=false}
   async connect(){
     this.topic=await topicForSecret(this.secret);
-    const url=NTFY_BASE+"/"+encodeURIComponent(this.topic)+"/sse?since=0";
+    const url=NTFY_BASE+"/"+encodeURIComponent(this.topic)+"/sse";
     this.source=new EventSource(url);
     await new Promise((resolve,reject)=>{
       const timer=setTimeout(()=>reject(new Error("Signaling connection timed out")),10000);
@@ -32,8 +32,24 @@ export class NtfySignaling extends EventTarget{
     if(!this.opened)throw new Error("Signaling is not connected");
     const message={v:PROTOCOL_VERSION,room:this.topic,from:this.clientId,seq:++this.seq,type,payload};
     message.sig=await hmac(this.secret,canonical(message));
-    const response=await fetch(NTFY_BASE+"/",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({topic:this.topic,message:JSON.stringify(message),cache:false})});
-    if(!response.ok)throw new Error("Signaling publish failed ("+response.status+")")
+
+    const response=await fetch(
+      NTFY_BASE+"/"+encodeURIComponent(this.topic),
+      {
+        method:"POST",
+        headers:{
+          "Content-Type":"text/plain;charset=utf-8",
+          "Cache":"no"
+        },
+        body:JSON.stringify(message)
+      }
+    );
+
+    if(!response.ok){
+      let detail="";
+      try{detail=(await response.text()).trim().slice(0,240)}catch{}
+      throw new Error("Signaling publish failed ("+response.status+")"+(detail?": "+detail:""));
+    }
   }
   close(){this.opened=false;this.source?.close();this.source=null;this.dispatchEvent(new CustomEvent("state",{detail:"closed"}))}
 }
