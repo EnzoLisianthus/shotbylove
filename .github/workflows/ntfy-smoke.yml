@@ -1,0 +1,33 @@
+name: ntfy signaling smoke test
+
+on:
+  push:
+    branches: ["main"]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  smoke:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Test ntfy publish and SSE-compatible topic
+        shell: bash
+        run: |
+          set -u
+          topic="sbl-smoke-${GITHUB_RUN_ID}-${GITHUB_RUN_ATTEMPT}"
+          echo "topic=$topic"
+          echo "--- direct topic POST ---"
+          curl -sS -D /tmp/headers.txt -o /tmp/body.txt \
+            -X POST \
+            -H 'Content-Type: text/plain;charset=utf-8' \
+            -H 'Cache: no' \
+            --data '{"v":1,"room":"smoke","from":"gha","seq":1,"type":"hello","payload":{"role":"host"},"sig":"test"}' \
+            "https://ntfy.sh/$topic"
+          code=$?
+          cat /tmp/headers.txt
+          cat /tmp/body.txt
+          echo
+          echo "curl_exit=$code"
+          test "$code" -eq 0
