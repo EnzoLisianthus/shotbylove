@@ -1,1 +1,68 @@
-const CACHE="shotbylove-v0.1.1-shell";const CORE=["./","./index.html","./style.css","./manifest.webmanifest","./icon.svg","./src/app.js","./src/signaling.js","./src/peer.js","./src/transfer.js","./src/storage.js"];self.addEventListener("install",e=>{self.skipWaiting();e.waitUntil(caches.open(CACHE).then(c=>c.addAll(CORE)))});self.addEventListener("activate",e=>{e.waitUntil((async()=>{for(const k of await caches.keys())if(k!==CACHE)await caches.delete(k);await self.clients.claim()})())});self.addEventListener("fetch",e=>{const r=e.request;if(r.method!=="GET")return;const u=new URL(r.url);if(u.origin!==self.location.origin)return;if(r.mode==="navigate"){e.respondWith((async()=>{try{const f=await fetch(r,{cache:"no-store"}),c=await caches.open(CACHE);c.put("./index.html",f.clone());return f}catch{return await caches.match("./index.html")||Response.error()}})());return}e.respondWith((async()=>{const c=await caches.match(r);if(c)return c;const f=await fetch(r);if(f.ok)(await caches.open(CACHE)).put(r,f.clone());return f})())});
+const CACHE="shotbylove-v0.1.2-shell";
+const CORE=[
+  "./",
+  "./index.html",
+  "./style.css?v=0.1.2",
+  "./manifest.webmanifest",
+  "./icon.svg",
+  "./src/app.js?v=0.1.2",
+  "./src/signaling.js?v=0.1.2",
+  "./src/peer.js?v=0.1.2",
+  "./src/transfer.js?v=0.1.2",
+  "./src/storage.js"
+];
+
+self.addEventListener("install",event=>{
+  self.skipWaiting();
+  event.waitUntil(caches.open(CACHE).then(cache=>cache.addAll(CORE)));
+});
+
+self.addEventListener("activate",event=>{
+  event.waitUntil((async()=>{
+    for(const key of await caches.keys()){
+      if(key!==CACHE)await caches.delete(key);
+    }
+    await self.clients.claim();
+  })());
+});
+
+async function networkFirst(request){
+  const cache=await caches.open(CACHE);
+  try{
+    const fresh=await fetch(request,{cache:"no-store"});
+    if(fresh.ok)cache.put(request,fresh.clone());
+    return fresh;
+  }catch{
+    return (await cache.match(request)) || Response.error();
+  }
+}
+
+self.addEventListener("fetch",event=>{
+  const request=event.request;
+  if(request.method!=="GET")return;
+  const url=new URL(request.url);
+  if(url.origin!==self.location.origin)return;
+
+  if(request.mode==="navigate"){
+    event.respondWith(networkFirst(request));
+    return;
+  }
+
+  const isMutableAsset=
+    url.pathname.includes("/src/") ||
+    url.pathname.endsWith(".css") ||
+    url.pathname.endsWith(".webmanifest");
+
+  if(isMutableAsset){
+    event.respondWith(networkFirst(request));
+    return;
+  }
+
+  event.respondWith((async()=>{
+    const cached=await caches.match(request);
+    if(cached)return cached;
+    const fresh=await fetch(request);
+    if(fresh.ok)(await caches.open(CACHE)).put(request,fresh.clone());
+    return fresh;
+  })());
+});
