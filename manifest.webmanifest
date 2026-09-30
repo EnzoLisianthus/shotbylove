@@ -1,0 +1,13 @@
+{
+  "name": "shotbylove · P2P file transfer",
+  "short_name": "shotbylove",
+  "description": "Private peer-to-peer file transfer in your browser.",
+  "id": "./",
+  "start_url": "./",
+  "scope": "./",
+  "display": "standalone",
+  "background_color": "#0b0d10",
+  "theme_color": "#0b0d10",
+  "icons": [{"src":"./icon.svg","sizes":"any","type":"image/svg+xml","purpose":"any maskable"}],
+  "categories": ["utilities", "productivity"]
+}

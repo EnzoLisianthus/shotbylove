@@ -1,0 +1,111 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+  <meta name="theme-color" content="#0b0d10">
+  <meta name="color-scheme" content="dark">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="apple-mobile-web-app-title" content="shotbylove">
+  <meta name="description" content="Private peer-to-peer file transfer in your browser.">
+  <link rel="manifest" href="./manifest.webmanifest">
+  <link rel="icon" href="./icon.svg" type="image/svg+xml">
+  <title>shotbylove · P2P file transfer</title>
+  <link rel="stylesheet" href="./style.css">
+</head>
+<body>
+  <main class="shell">
+    <header class="topbar">
+      <a class="brand" href="./" aria-label="shotbylove home">
+        <span class="brand-mark" aria-hidden="true">↗</span>
+        <span>shotbylove</span>
+      </a>
+      <div class="status-pill" id="global-status">ready</div>
+    </header>
+    <section class="hero" id="home-view">
+      <p class="eyebrow">PRIVATE P2P TRANSFER</p>
+      <h1>Send files.<br><span>Not uploads.</span></h1>
+      <p class="lede">Files move directly between browsers over WebRTC. This v0 uses a temporary public signaling transport only to introduce the two peers.</p>
+      <div class="action-grid">
+        <button class="action-card primary" id="create-room-btn" type="button">
+          <span class="action-icon">↑</span><span><strong>Create transfer</strong><small>Make a private room and share its link</small></span>
+        </button>
+        <button class="action-card" id="join-toggle-btn" type="button">
+          <span class="action-icon">↓</span><span><strong>Join transfer</strong><small>Paste a room link or session key</small></span>
+        </button>
+      </div>
+      <form class="join-panel hidden" id="join-form">
+        <label for="join-input">Room link or session key</label>
+        <div class="join-row">
+          <input id="join-input" autocomplete="off" autocapitalize="off" spellcheck="false" placeholder="Paste link or key">
+          <button class="small-button" type="submit">Join</button>
+        </div>
+      </form>
+      <div class="facts"><span>No account</span><span>No file storage</span><span>End-to-end WebRTC encryption</span></div>
+    </section>
+    <section class="workspace hidden" id="workspace-view">
+      <div class="room-card">
+        <div>
+          <p class="eyebrow" id="room-role">PRIVATE ROOM</p>
+          <h2 id="room-title">Waiting for another device</h2>
+          <p class="muted" id="room-detail">Keep this page open while the other device joins.</p>
+        </div>
+        <div class="room-actions" id="share-actions">
+          <button class="small-button" id="share-btn" type="button">Share link</button>
+          <button class="ghost-button" id="copy-btn" type="button">Copy</button>
+        </div>
+        <div class="session-box" id="session-box"><span>Session</span><code id="session-code">—</code></div>
+      </div>
+      <div class="peer-card">
+        <div class="peer-orb" id="peer-orb"></div>
+        <div class="peer-copy"><strong id="peer-state">Connecting…</strong><span id="peer-detail">Negotiating a WebRTC data channel</span></div>
+        <span class="path-badge" id="path-badge">—</span>
+      </div>
+      <section class="transfer-area hidden" id="transfer-area">
+        <label class="drop-zone" id="drop-zone" for="file-input">
+          <input id="file-input" type="file" hidden>
+          <span class="drop-icon">＋</span><strong>Choose a file</strong><small>or drop it here</small>
+        </label>
+        <article class="transfer-card hidden" id="transfer-card">
+          <div class="transfer-head">
+            <div><strong id="transfer-name">file</strong><span id="transfer-meta">—</span></div>
+            <span class="transfer-state" id="transfer-state">Preparing</span>
+          </div>
+          <div class="progress-track"><div class="progress-bar" id="progress-bar"></div></div>
+          <div class="transfer-stats"><span id="progress-text">0%</span><span id="speed-text">—</span></div>
+          <div class="transfer-actions" id="transfer-actions"></div>
+        </article>
+        <article class="incoming-card hidden" id="incoming-card">
+          <div><p class="eyebrow">INCOMING FILE</p><strong id="incoming-name">—</strong><span id="incoming-meta">—</span></div>
+          <div class="incoming-actions">
+            <button class="small-button" id="accept-file-btn" type="button">Accept</button>
+            <button class="ghost-button" id="reject-file-btn" type="button">Decline</button>
+          </div>
+        </article>
+      </section>
+      <details class="technical">
+        <summary>Technical details</summary>
+        <div class="technical-grid">
+          <span>Signaling</span><code id="signaling-state">idle</code>
+          <span>WebRTC</span><code id="rtc-state">new</code>
+          <span>Data channel</span><code id="channel-state">closed</code>
+          <span>Storage sink</span><code id="sink-state">—</code>
+        </div>
+        <pre id="debug-log" aria-live="polite"></pre>
+      </details>
+      <button class="leave-button" id="leave-btn" type="button">Leave session</button>
+    </section>
+    <section class="install-banner hidden" id="install-banner">
+      <div><strong>Install shotbylove</strong><span id="install-copy">Keep it one tap away.</span></div>
+      <button class="small-button" id="install-btn" type="button">Install</button>
+      <button class="icon-button" id="install-dismiss" type="button" aria-label="Dismiss">×</button>
+    </section>
+    <footer>
+      <span>v0 · experimental</span>
+      <a href="https://github.com/EnzoLisianthus/shotbylove" target="_blank" rel="noreferrer">GitHub ↗</a>
+    </footer>
+  </main>
+  <script type="module" src="./src/app.js"></script>
+</body>
+</html>
