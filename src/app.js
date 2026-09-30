@@ -1,9 +1,9 @@
-import{NtfySignaling,createSessionSecret,normalizeSessionInput,sessionLabel}from"./signaling.js?v=0.1.2";
-import{PeerSession}from"./peer.js?v=0.1.2";
-import{TransferManager}from"./transfer.js?v=0.1.2";
+import{NtfySignaling,createSessionSecret,normalizeSessionInput,sessionLabel}from"./signaling.js?v=0.1.3";
+import{PeerSession}from"./peer.js?v=0.1.3";
+import{TransferManager}from"./transfer.js?v=0.1.3";
 const $=id=>document.getElementById(id);
 const ui={home:$("home-view"),workspace:$("workspace-view"),status:$("global-status"),create:$("create-room-btn"),joinToggle:$("join-toggle-btn"),joinForm:$("join-form"),joinInput:$("join-input"),role:$("room-role"),title:$("room-title"),detail:$("room-detail"),shareActions:$("share-actions"),share:$("share-btn"),copy:$("copy-btn"),code:$("session-code"),peerOrb:$("peer-orb"),peerState:$("peer-state"),peerDetail:$("peer-detail"),path:$("path-badge"),transferArea:$("transfer-area"),dropZone:$("drop-zone"),fileInput:$("file-input"),transferCard:$("transfer-card"),transferName:$("transfer-name"),transferMeta:$("transfer-meta"),transferState:$("transfer-state"),progressBar:$("progress-bar"),progressText:$("progress-text"),speedText:$("speed-text"),transferActions:$("transfer-actions"),incoming:$("incoming-card"),incomingName:$("incoming-name"),incomingMeta:$("incoming-meta"),accept:$("accept-file-btn"),reject:$("reject-file-btn"),signalingState:$("signaling-state"),rtcState:$("rtc-state"),channelState:$("channel-state"),sinkState:$("sink-state"),debug:$("debug-log"),leave:$("leave-btn"),installBanner:$("install-banner"),installBtn:$("install-btn"),installCopy:$("install-copy"),installDismiss:$("install-dismiss")};
-let signaling=null,peer=null,transfers=null,secret="",role="",shareUrl="",pendingIncoming=null,currentDownloadCleanup=null,deferredInstallPrompt=null;
+let signaling=null,peer=null,transfers=null,secret="",role="",shareUrl="",pendingIncoming=null,currentReceived=null,deferredInstallPrompt=null;
 function log(message){const time=new Date().toLocaleTimeString([],{hour12:false});ui.debug.textContent+="["+time+"] "+message+"\n";ui.debug.scrollTop=ui.debug.scrollHeight}
 function humanSize(bytes){const units=["B","KB","MB","GB","TB"];let value=bytes,i=0;while(value>=1024&&i<units.length-1){value/=1024;i++}const display=value>=100?value.toFixed(0):value>=10?value.toFixed(1):value.toFixed(2);return display+" "+units[i]}
 function setWorkspace(){ui.home.classList.add("hidden");ui.workspace.classList.remove("hidden")}
@@ -11,6 +11,114 @@ function resetProgress(){ui.progressBar.style.width="0%";ui.progressText.textCon
 function showTransfer(meta,state){ui.transferCard.classList.remove("hidden");ui.transferName.textContent=meta.name;ui.transferMeta.textContent=humanSize(meta.size);ui.transferState.textContent=state;resetProgress()}
 function updateProgress(detail){const pct=detail.total?Math.min(100,detail.loaded/detail.total*100):0;ui.progressBar.style.width=pct+"%";ui.progressText.textContent=pct.toFixed(pct<10?1:0)+"% · "+humanSize(detail.loaded)+" / "+humanSize(detail.total);ui.speedText.textContent=detail.rate;ui.transferState.textContent=detail.direction==="send"?"Sending":"Receiving"}
 function addCancelButton(){ui.transferActions.innerHTML="";const button=document.createElement("button");button.className="ghost-button";button.textContent="Cancel";button.onclick=()=>transfers?.cancelActive();ui.transferActions.append(button)}
+
+async function releaseReceived(){
+  const current=currentReceived;
+  currentReceived=null;
+  if(!current)return;
+  try{if(current.objectUrl)URL.revokeObjectURL(current.objectUrl)}catch{}
+  try{await current.result?.cleanup?.()}catch{}
+}
+
+function asNamedFile(meta,blob){
+  try{
+    if(blob instanceof File&&blob.name===meta.name)return blob;
+    return new File([blob],meta.name,{
+      type:meta.type||blob.type||"application/octet-stream",
+      lastModified:meta.lastModified||Date.now()
+    });
+  }catch{
+    return blob;
+  }
+}
+
+async function saveReceivedFile(){
+  const current=currentReceived;
+  if(!current)return;
+  const {meta,result}=current;
+  const blob=result.blob;
+  ui.transferState.textContent="Saving…";
+
+  try{
+    if(typeof window.showSaveFilePicker==="function"){
+      const handle=await window.showSaveFilePicker({suggestedName:meta.name});
+      const writable=await handle.createWritable();
+      if(typeof blob.stream==="function"){
+        await blob.stream().pipeTo(writable);
+      }else{
+        await writable.write(blob);
+        await writable.close();
+      }
+      ui.transferState.textContent="Saved";
+      log("saved via File System Access");
+      return;
+    }
+
+    const namedFile=asNamedFile(meta,blob);
+    if(namedFile instanceof File&&typeof navigator.share==="function"&&typeof navigator.canShare==="function"&&navigator.canShare({files:[namedFile]})){
+      await navigator.share({files:[namedFile],title:meta.name});
+      ui.transferState.textContent="Saved / shared";
+      log("native save/share sheet completed");
+      return;
+    }
+
+    const downloadBlob=blob.type==="application/octet-stream"?blob:new Blob([blob],{type:"application/octet-stream"});
+    const url=URL.createObjectURL(downloadBlob);
+    if(current.objectUrl)URL.revokeObjectURL(current.objectUrl);
+    current.objectUrl=url;
+
+    const link=document.createElement("a");
+    link.href=url;
+    link.download=meta.name;
+    link.target="_self";
+    link.rel="noopener";
+    document.body.append(link);
+    link.click();
+    link.remove();
+
+    ui.transferState.textContent="Download started";
+    log("browser download fallback triggered");
+
+    setTimeout(()=>{
+      if(currentReceived===current&&current.objectUrl===url){
+        try{URL.revokeObjectURL(url)}catch{}
+        current.objectUrl=null;
+      }
+    },120000);
+  }catch(error){
+    if(error?.name==="AbortError"){
+      ui.transferState.textContent="Ready to save";
+      log("save cancelled");
+      return;
+    }
+    ui.transferState.textContent="Save failed";
+    log("save error: "+(error?.message||String(error)));
+  }
+}
+
+async function showReceivedFile(meta,result){
+  await releaseReceived();
+  currentReceived={meta,result,objectUrl:null};
+
+  const button=document.createElement("button");
+  button.className="small-button";
+  const namedFile=asNamedFile(meta,result.blob);
+  const canNativeShare=namedFile instanceof File&&typeof navigator.share==="function"&&typeof navigator.canShare==="function"&&navigator.canShare({files:[namedFile]});
+  button.textContent=canNativeShare?"Save / Share":"Save file";
+  button.type="button";
+  button.onclick=saveReceivedFile;
+  ui.transferActions.append(button);
+
+  if(canNativeShare){
+    const hint=document.createElement("span");
+    hint.className="save-hint";
+    hint.textContent="On iPhone/iPad, choose Save to Files in the share sheet.";
+    ui.transferActions.append(hint);
+  }
+
+  ui.transferState.textContent="Ready to save";
+  log("receive complete via "+result.kind+" · ready to save");
+}
 async function beginSession(nextRole,nextSecret){
   role=nextRole;secret=nextSecret;setWorkspace();ui.status.textContent="signaling";ui.role.textContent=role==="host"?"SENDER ROOM":"JOINING ROOM";ui.title.textContent=role==="host"?"Waiting for another device":"Joining private session";ui.detail.textContent=role==="host"?"Share this link. The file itself never goes through the signaling service.":"Authenticating the room and negotiating WebRTC.";ui.shareActions.classList.toggle("hidden",role!=="host");shareUrl=location.origin+location.pathname+"#join/"+secret;ui.code.textContent=await sessionLabel(secret);
   signaling=new NtfySignaling(secret);signaling.addEventListener("state",event=>{ui.signalingState.textContent=event.detail;log("signaling: "+event.detail)});
@@ -31,7 +139,7 @@ function bindTransfers(){
   transfers.addEventListener("rejected",event=>{ui.transferState.textContent="Declined";ui.transferActions.innerHTML="";log("file rejected: "+event.detail.reason)});
   transfers.addEventListener("cancelled",()=>{ui.transferState.textContent="Cancelled";ui.transferActions.innerHTML="";ui.incoming.classList.add("hidden");log("transfer cancelled")});
   transfers.addEventListener("error",event=>{ui.transferState.textContent="Error";ui.transferActions.innerHTML="";log("transfer error: "+event.detail.error.message)});
-  transfers.addEventListener("complete",event=>{const direction=event.detail.direction,meta=event.detail.meta,result=event.detail.result;ui.transferState.textContent="Complete";ui.progressBar.style.width="100%";ui.progressText.textContent="100% · "+humanSize(meta.size);ui.transferActions.innerHTML="";if(direction==="receive"&&result?.blob){currentDownloadCleanup?.();const url=URL.createObjectURL(result.blob),link=document.createElement("a");link.className="small-button";link.textContent="Save file";link.download=meta.name;link.href=url;ui.transferActions.append(link);currentDownloadCleanup=async()=>{URL.revokeObjectURL(url);await result.cleanup?.()};log("receive complete via "+result.kind)}else log("send complete")})
+  transfers.addEventListener("complete",async event=>{const direction=event.detail.direction,meta=event.detail.meta,result=event.detail.result;ui.transferState.textContent="Complete";ui.progressBar.style.width="100%";ui.progressText.textContent="100% · "+humanSize(meta.size);ui.transferActions.innerHTML="";if(direction==="receive"&&result?.blob){await showReceivedFile(meta,result)}else log("send complete")})
 }
 async function sendFile(file){if(!transfers||!file)return;try{showTransfer({name:file.name,size:file.size},"Offering");const meta=transfers.offer(file);showTransfer(meta,"Waiting for acceptance");addCancelButton()}catch(error){log("send error: "+error.message)}}
 ui.create.addEventListener("click",()=>beginSession("host",createSessionSecret()));
@@ -45,11 +153,11 @@ for(const type of["dragleave","drop"])ui.dropZone.addEventListener(type,event=>{
 ui.dropZone.addEventListener("drop",event=>sendFile(event.dataTransfer?.files?.[0]));
 ui.accept.addEventListener("click",async()=>{if(!pendingIncoming)return;try{showTransfer(pendingIncoming,"Preparing storage");addCancelButton();ui.incoming.classList.add("hidden");await transfers.acceptIncoming();pendingIncoming=null}catch(error){ui.transferState.textContent="Cannot receive";log("receive setup error: "+error.message)}});
 ui.reject.addEventListener("click",()=>{transfers?.rejectIncoming();pendingIncoming=null;ui.incoming.classList.add("hidden")});
-ui.leave.addEventListener("click",()=>{signaling?.close();peer?.close();location.href=location.pathname});
-window.addEventListener("beforeunload",()=>{currentDownloadCleanup?.();signaling?.close();peer?.close()});
+ui.leave.addEventListener("click",async()=>{await releaseReceived();signaling?.close();peer?.close();location.href=location.pathname});
+window.addEventListener("beforeunload",()=>{signaling?.close();peer?.close()});
 window.addEventListener("beforeinstallprompt",event=>{event.preventDefault();deferredInstallPrompt=event;ui.installBanner.classList.remove("hidden")});
 ui.installBtn.addEventListener("click",async()=>{if(deferredInstallPrompt){deferredInstallPrompt.prompt();await deferredInstallPrompt.userChoice;deferredInstallPrompt=null;ui.installBanner.classList.add("hidden")}});
 ui.installDismiss.addEventListener("click",()=>ui.installBanner.classList.add("hidden"));
 function maybeShowIosInstallHint(){const ios=/iPad|iPhone|iPod/.test(navigator.userAgent),standalone=navigator.standalone===true||matchMedia("(display-mode: standalone)").matches;if(ios&&!standalone&&!sessionStorage.getItem("sbl-install-dismissed")){ui.installCopy.textContent="Safari Share → Add to Home Screen";ui.installBtn.classList.add("hidden");ui.installBanner.classList.remove("hidden");ui.installDismiss.onclick=()=>{sessionStorage.setItem("sbl-install-dismissed","1");ui.installBanner.classList.add("hidden")}}}
 async function registerServiceWorker(){if(!("serviceWorker"in navigator))return;try{const registration=await navigator.serviceWorker.register("./sw.js",{updateViaCache:"none"});registration.update().catch(()=>{})}catch(error){log("service worker: "+error.message)}}
-log("build v0.1.2");registerServiceWorker();maybeShowIosInstallHint();const hashSecret=normalizeSessionInput(location.hash);if(hashSecret.length>=16){ui.joinForm.classList.remove("hidden");ui.joinInput.value=hashSecret;ui.joinInput.focus()}
+log("build v0.1.3");registerServiceWorker();maybeShowIosInstallHint();const hashSecret=normalizeSessionInput(location.hash);if(hashSecret.length>=16){ui.joinForm.classList.remove("hidden");ui.joinInput.value=hashSecret;ui.joinInput.focus()}
