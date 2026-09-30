@@ -1,14 +1,14 @@
-const CACHE="shotbylove-v0.1.3-shell";
+const CACHE="shotbylove-v0.1.4-shell";
 const CORE=[
   "./",
   "./index.html",
-  "./style.css?v=0.1.3",
+  "./style.css?v=0.1.4",
   "./manifest.webmanifest",
   "./icon.svg",
-  "./src/app.js?v=0.1.3",
-  "./src/signaling.js?v=0.1.3",
-  "./src/peer.js?v=0.1.3",
-  "./src/transfer.js?v=0.1.3",
+  "./src/app.js?v=0.1.4",
+  "./src/signaling.js?v=0.1.4",
+  "./src/peer.js?v=0.1.4",
+  "./src/transfer.js?v=0.1.4",
   "./src/storage.js"
 ];
 

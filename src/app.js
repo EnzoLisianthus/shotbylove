@@ -1,6 +1,6 @@
-import{NtfySignaling,createSessionSecret,normalizeSessionInput,sessionLabel}from"./signaling.js?v=0.1.3";
-import{PeerSession}from"./peer.js?v=0.1.3";
-import{TransferManager}from"./transfer.js?v=0.1.3";
+import{NtfySignaling,createSessionSecret,normalizeSessionInput,sessionLabel}from"./signaling.js?v=0.1.4";
+import{PeerSession}from"./peer.js?v=0.1.4";
+import{TransferManager}from"./transfer.js?v=0.1.4";
 const $=id=>document.getElementById(id);
 const ui={home:$("home-view"),workspace:$("workspace-view"),status:$("global-status"),create:$("create-room-btn"),joinToggle:$("join-toggle-btn"),joinForm:$("join-form"),joinInput:$("join-input"),role:$("room-role"),title:$("room-title"),detail:$("room-detail"),shareActions:$("share-actions"),share:$("share-btn"),copy:$("copy-btn"),code:$("session-code"),peerOrb:$("peer-orb"),peerState:$("peer-state"),peerDetail:$("peer-detail"),path:$("path-badge"),transferArea:$("transfer-area"),dropZone:$("drop-zone"),fileInput:$("file-input"),transferCard:$("transfer-card"),transferName:$("transfer-name"),transferMeta:$("transfer-meta"),transferState:$("transfer-state"),progressBar:$("progress-bar"),progressText:$("progress-text"),speedText:$("speed-text"),transferActions:$("transfer-actions"),incoming:$("incoming-card"),incomingName:$("incoming-name"),incomingMeta:$("incoming-meta"),accept:$("accept-file-btn"),reject:$("reject-file-btn"),signalingState:$("signaling-state"),rtcState:$("rtc-state"),channelState:$("channel-state"),sinkState:$("sink-state"),debug:$("debug-log"),leave:$("leave-btn"),installBanner:$("install-banner"),installBtn:$("install-btn"),installCopy:$("install-copy"),installDismiss:$("install-dismiss")};
 let signaling=null,peer=null,transfers=null,secret="",role="",shareUrl="",pendingIncoming=null,currentReceived=null,deferredInstallPrompt=null;
@@ -136,6 +136,7 @@ function bindTransfers(){
   transfers.addEventListener("offered",event=>{showTransfer(event.detail.meta,"Waiting for acceptance");addCancelButton();log("file offered: "+event.detail.meta.name)});
   transfers.addEventListener("sink",event=>{ui.sinkState.textContent=event.detail.kind;log("receive sink: "+event.detail.kind)});
   transfers.addEventListener("progress",event=>updateProgress(event.detail));
+  transfers.addEventListener("awaiting-confirmation",event=>{ui.transferState.textContent="Waiting for receiver";ui.speedText.textContent="Verifying received bytes…";log("all chunks queued · waiting for receiver acknowledgement")});
   transfers.addEventListener("rejected",event=>{ui.transferState.textContent="Declined";ui.transferActions.innerHTML="";log("file rejected: "+event.detail.reason)});
   transfers.addEventListener("cancelled",()=>{ui.transferState.textContent="Cancelled";ui.transferActions.innerHTML="";ui.incoming.classList.add("hidden");log("transfer cancelled")});
   transfers.addEventListener("error",event=>{ui.transferState.textContent="Error";ui.transferActions.innerHTML="";log("transfer error: "+event.detail.error.message)});
@@ -160,4 +161,4 @@ ui.installBtn.addEventListener("click",async()=>{if(deferredInstallPrompt){defer
 ui.installDismiss.addEventListener("click",()=>ui.installBanner.classList.add("hidden"));
 function maybeShowIosInstallHint(){const ios=/iPad|iPhone|iPod/.test(navigator.userAgent),standalone=navigator.standalone===true||matchMedia("(display-mode: standalone)").matches;if(ios&&!standalone&&!sessionStorage.getItem("sbl-install-dismissed")){ui.installCopy.textContent="Safari Share → Add to Home Screen";ui.installBtn.classList.add("hidden");ui.installBanner.classList.remove("hidden");ui.installDismiss.onclick=()=>{sessionStorage.setItem("sbl-install-dismissed","1");ui.installBanner.classList.add("hidden")}}}
 async function registerServiceWorker(){if(!("serviceWorker"in navigator))return;try{const registration=await navigator.serviceWorker.register("./sw.js",{updateViaCache:"none"});registration.update().catch(()=>{})}catch(error){log("service worker: "+error.message)}}
-log("build v0.1.3");registerServiceWorker();maybeShowIosInstallHint();const hashSecret=normalizeSessionInput(location.hash);if(hashSecret.length>=16){ui.joinForm.classList.remove("hidden");ui.joinInput.value=hashSecret;ui.joinInput.focus()}
+log("build v0.1.4");registerServiceWorker();maybeShowIosInstallHint();const hashSecret=normalizeSessionInput(location.hash);if(hashSecret.length>=16){ui.joinForm.classList.remove("hidden");ui.joinInput.value=hashSecret;ui.joinInput.focus()}
