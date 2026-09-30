@@ -12,22 +12,31 @@ jobs:
   smoke:
     runs-on: ubuntu-latest
     steps:
-      - name: Test ntfy publish and SSE-compatible topic
+      - name: Test browser-equivalent ntfy CORS flow
         shell: bash
         run: |
           set -u
           topic="sbl-smoke-${GITHUB_RUN_ID}-${GITHUB_RUN_ATTEMPT}"
+          origin="https://enzolisianthus.github.io"
           echo "topic=$topic"
-          echo "--- direct topic POST ---"
-          curl -sS -D /tmp/headers.txt -o /tmp/body.txt \
+          echo "--- OPTIONS preflight ---"
+          curl -sS -D /tmp/opt-h.txt -o /tmp/opt-b.txt \
+            -X OPTIONS \
+            -H "Origin: $origin" \
+            -H 'Access-Control-Request-Method: POST' \
+            -H 'Access-Control-Request-Headers: cache,content-type' \
+            "https://ntfy.sh/$topic"
+          cat /tmp/opt-h.txt
+          cat /tmp/opt-b.txt
+          echo
+          echo "--- browser-equivalent POST ---"
+          curl -sS -D /tmp/post-h.txt -o /tmp/post-b.txt \
             -X POST \
+            -H "Origin: $origin" \
             -H 'Content-Type: text/plain;charset=utf-8' \
             -H 'Cache: no' \
             --data '{"v":1,"room":"smoke","from":"gha","seq":1,"type":"hello","payload":{"role":"host"},"sig":"test"}' \
             "https://ntfy.sh/$topic"
-          code=$?
-          cat /tmp/headers.txt
-          cat /tmp/body.txt
+          cat /tmp/post-h.txt
+          cat /tmp/post-b.txt
           echo
-          echo "curl_exit=$code"
-          test "$code" -eq 0
