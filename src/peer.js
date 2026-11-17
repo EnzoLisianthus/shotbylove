@@ -8,6 +8,8 @@ export class PeerSession extends EventTarget{
     this.signaling=signaling;
     this.remoteId=null;
     this.remoteDeviceId=null;
+    this.remoteEpoch=null;
+    this.epoch=crypto.randomUUID();
     this.pc=new RTCPeerConnection({iceServers:ICE_SERVERS,iceCandidatePoolSize:1});
     this.channel=null;
     this.pendingCandidates=[];
@@ -30,7 +32,7 @@ export class PeerSession extends EventTarget{
 
   async announce(reply=false){
     if(this.closed)return;
-    await this.signaling.send("hello",{device:this.signaling.deviceId,reply});
+    await this.signaling.send("hello",{device:this.signaling.deviceId,reply,epoch:this.epoch});
   }
 
   async onSignal(message){
@@ -48,6 +50,14 @@ export class PeerSession extends EventTarget{
         }
         return;
       }
+      // The same browser tab may have rebuilt its RTCPeerConnection.
+      // Detect a fresh peer epoch even when the signaling client ID is unchanged.
+      if(this.remoteId===from&&this.remoteEpoch&&payload.epoch&&this.remoteEpoch!==payload.epoch){
+        if(this.channel?.readyState==="open"||this.offerStarted||this.pc.remoteDescription){
+          this.dispatchEvent(new CustomEvent("peer-switch"));
+          return;
+        }
+      }
       if(!this.remoteId){
         this.remoteId=from;
         this.remoteDeviceId=typeof payload.device==="string"?payload.device:null;
@@ -55,6 +65,7 @@ export class PeerSession extends EventTarget{
       }else if(!this.remoteDeviceId&&typeof payload.device==="string"){
         this.remoteDeviceId=payload.device;
       }
+      if(typeof payload.epoch==="string")this.remoteEpoch=payload.epoch;
       if(!payload.reply)this.announce(true).catch(error=>this.fail(error));
       if(this.signaling.clientId<from&&!this.offerStarted)await this.startOffer();
       return;
