@@ -1,17 +1,20 @@
-const CACHE="shotbylove-v0.2.0-shell";
+const CACHE="shotbylove-v0.3.0-shell";
 const CORE=[
   "./",
   "./index.html",
-  "./style.css?v=0.2.0",
+  "./style.css?v=0.3.0",
   "./manifest.webmanifest",
   "./icon.svg",
-  "./src/app.js?v=0.2.0",
-  "./src/signaling.js?v=0.2.0",
-  "./src/peer.js?v=0.2.0",
-  "./src/transfer.js?v=0.2.0",
+  "./icon-192.png",
+  "./icon-512.png",
+  "./apple-touch-icon.png",
+  "./src/app.js?v=0.3.0",
+  "./src/signaling.js?v=0.3.0",
+  "./src/peer.js?v=0.3.0",
+  "./src/transfer.js?v=0.3.0",
   "./src/storage.js",
-  "./vendor/qrcode.min.js?v=0.2.0",
-  "./vendor/jsQR.js?v=0.2.0"
+  "./vendor/qrcode.min.js?v=0.3.0",
+  "./vendor/jsQR.js?v=0.3.0"
 ];
 
 self.addEventListener("install",event=>{

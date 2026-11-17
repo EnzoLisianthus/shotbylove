@@ -1,46 +1,51 @@
 # shotbylove
 
-QR-first, browser-to-browser file transfer.
+QR-first peer-to-peer file transfer with a focused, app-style mobile experience.
 
-Open **https://enzolisianthus.github.io/shotbylove/**. A pairing QR and **Scan QR code** button appear immediately. Scan the QR on another device (using its normal camera or the in-app scanner), and both devices join the same session automatically. No account, host selection, or separate room creation step is needed.
+## v0.3.0
 
-## v0.2.0 features
+The UI has three distinct scenes:
 
-- QR code on the home screen, with built-in camera and image QR scanning
-- automatic session creation and immediate joining from `#join/<secret>` links
-- the same private session link saved locally for reopening/reconnecting
-- a stable, locally generated device identifier to recognize a returning device
-- symmetric peer discovery: either device can create the WebRTC offer
-- reconnect the WebRTC session when the peer leaves, reconnects, or the data channel fails
-- WebRTC DataChannel, chunking/backpressure, per-file consent, progress, OPFS sink and memory fallback
-- copy/share link, installable PWA, and QR assets bundled locally
+1. **Pair:** Show your QR immediately, scan another device's QR, share the link, or enter a session link.
+2. **Connecting:** Show matching, connection, and reconnection status, without the QR and transfer controls.
+3. **Transfer:** Display the file picker, transfer progress, and incoming file requests after the WebRTC data channel opens.
 
-The short code displayed on screen is a **visual session label**, not a join key. To join manually, paste the **full link** or **22-character secret**. A displayed QR encodes the full link.
+You can reopen the QR from the connecting and transfer scenes without leaving the underlying session. Scanning a QR or opening an invite link automatically enters the same session.
 
-### How reconnect works
+### Installed mobile PWA
 
-Both devices keep the same secret while in the session. If one goes offline or reloads, the remaining browser waits with the same QR. When the other device returns with that link, the browsers renegotiate WebRTC. The original sender/receiver role does not matter.
+- iOS standalone metadata with a dedicated 180×180 Apple touch icon
+- Installable Android manifest with 192×192 and 512×512 PNG icons
+- Screen-height layouts adapted to small displays, landscape mode, display cutouts and safe areas
+- Touch-sized controls, camera scanner overlay, native share/save actions and transitions
+- Local PWA caching for offline app-shell loading (transfer requires network connectivity)
+- Compact labels rather than long technical explanations
 
-**An interrupted file must currently be selected and sent again.** This release reconnects the peer connection; it does not resume a partly transferred file.
+For iOS, install through Safari's **Share → Add to Home Screen**. For Android, use your browser's **Install app** action if supported.
 
-### Temporary signaling and network limits
+### Connection and transfer
 
-GitHub Pages only hosts static assets. The public `ntfy.sh` service exchanges HMAC-authenticated hello/offer/answer/ICE messages; file contents are not published there. Presence announcements happen at join/rejoin, not as a high-frequency background heartbeat. This is important because the public service enforces usage limits.
+- No required host/guest choice
+- Session key and local device identifier persist for reconnection
+- Peer negotiation is rebuilt after a connection is interrupted
+- The startup signaling race (signaling connected before the peer exists) is guarded
+- HMAC-authenticated signaling through the temporary public `ntfy.sh` service
+- Ordered WebRTC DataChannel, chunking/backpressure, receiving consent, OPFS/memory fallback and transfer progress
 
-There is **STUN but no TURN relay**. Some NAT/firewall/mobile-network combinations will still fail regardless of reconnect attempts. A dedicated signaling service and TURN are needed for production-level connection reliability.
+**Limitations:** STUN without TURN cannot connect every network pair. An interrupted file must be resent; partial-file resume is not implemented. The short display code is only a visual label, not an entry key. A full QR link or 22-character session secret is required.
 
-Session URLs/QRs are bearer secrets; anyone who possesses them can join. The secret is also kept in this browser's local storage so the session can be reopened.
+### Development
 
-### Run locally
-
-Serve the repository over HTTP(S), not `file://`:
+Run from an HTTP(S) server, not `file://`:
 
 ```bash
 python -m http.server 8080
 ```
 
-Cross-device camera pairing requires a secure context, so use the deployed HTTPS Pages site. QR libraries are included under `vendor/` with their respective licenses.
+For phone-to-phone testing, use the deployed HTTPS GitHub Pages application:
 
-See `docs/ARCHITECTURE.md`, `docs/PROTOCOL.md` and `docs/SECURITY.md`.
+https://enzolisianthus.github.io/shotbylove/
 
-**Status:** Experimental v0.2.0. Do not rely on this build for the only copy of important data.
+See `docs/ARCHITECTURE.md`, `docs/PROTOCOL.md`, and `docs/SECURITY.md`.
+
+**Status:** Experimental. Do not use this as the sole means of transferring irreplaceable files.

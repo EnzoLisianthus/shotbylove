@@ -1,133 +1,169 @@
 <!doctype html>
-<html lang="en">
+<html lang="ko">
 <head>
   <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
   <meta name="theme-color" content="#0b0d10">
   <meta name="color-scheme" content="dark">
+  <meta name="mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
   <meta name="apple-mobile-web-app-title" content="shotbylove">
-  <meta name="description" content="Private peer-to-peer file transfer in your browser.">
+  <meta name="description" content="QR로 연결하고 파일을 직접 전송하세요.">
   <link rel="manifest" href="./manifest.webmanifest">
   <link rel="icon" href="./icon.svg" type="image/svg+xml">
-  <title>shotbylove · P2P file transfer</title>
-  <link rel="stylesheet" href="./style.css?v=0.2.0">
+  <link rel="apple-touch-icon" sizes="180x180" href="./apple-touch-icon.png">
+  <title>shotbylove</title>
+  <link rel="stylesheet" href="./style.css?v=0.3.0">
 </head>
 <body>
-  <main class="shell">
+  <main class="shell" id="app-shell" data-scene="pair">
     <header class="topbar">
-      <a class="brand" href="./" aria-label="shotbylove home">
+      <span class="brand" aria-label="shotbylove">
         <span class="brand-mark" aria-hidden="true">↗</span>
         <span>shotbylove</span>
-      </a>
-      <div class="status-pill" id="global-status">ready</div>
+      </span>
+      <div class="status-pill" id="global-status" role="status">대기</div>
     </header>
-    <section class="hero" id="home-view">
-      <p class="eyebrow">DIRECT · PRIVATE · PEER TO PEER</p>
-      <h1>One scan.<br><span>Connected.</span></h1>
-      <p class="lede">Scan to pair two devices and transfer files directly. Both devices can send and receive.</p>
-      <div class="pairing-card">
-        <div class="qr-frame"><div id="qr-display" role="img" aria-label="QR code to join this transfer session"></div></div>
-        <div class="pairing-info">
-          <p class="eyebrow">YOUR SESSION</p>
-          <strong class="pairing-code" id="home-session-code">Generating…</strong>
-          <p class="muted pairing-status" id="pairing-status" aria-live="polite">Preparing a private session</p>
-          <button class="scan-button" id="scan-qr-btn" type="button"><span aria-hidden="true">▣</span> Scan QR code</button>
-          <div class="pairing-actions">
-            <button class="ghost-button" id="home-share-btn" type="button">Share link</button>
-            <button class="ghost-button" id="home-copy-btn" type="button">Copy link</button>
+
+    <div class="scene-container">
+      <!-- Scene 1 — always ready to display or scan a pairing QR -->
+      <section class="scene scene-pair" id="home-view" aria-label="QR 연결">
+        <div class="scene-heading">
+          <p class="eyebrow">PAIR</p>
+          <h1>QR로 연결</h1>
+        </div>
+        <div class="pairing-card">
+          <div class="qr-frame">
+            <div id="qr-display" role="img" aria-label="내 기기에 연결하는 QR 코드"></div>
+          </div>
+          <strong class="pairing-code" id="home-session-code">준비 중</strong>
+          <p class="pairing-status" id="pairing-status" aria-live="polite">연결 대기</p>
+        </div>
+        <div class="pair-actions">
+          <button class="primary-action" id="scan-qr-btn" type="button">
+            <span class="action-glyph" aria-hidden="true">▣</span>QR 스캔
+          </button>
+          <div class="two-actions">
+            <button class="secondary-action" id="home-share-btn" type="button">링크 공유</button>
+            <button class="secondary-action" id="home-copy-btn" type="button">링크 복사</button>
           </div>
         </div>
-      </div>
-      <div class="extra-actions">
-        <button class="text-button" id="join-toggle-btn" type="button">Enter a session link or key</button>
-        <button class="text-button" id="new-code-btn" type="button">New session code</button>
-      </div>
-      <form class="join-panel hidden" id="join-form">
-        <label for="join-input">Paste a full link or session key (not the short display code)</label>
-        <div class="join-row">
-          <input id="join-input" autocomplete="off" autocapitalize="off" spellcheck="false" placeholder="Paste link or 22-character key">
-          <button class="small-button" type="submit">Connect</button>
+        <div class="text-actions">
+          <button class="text-button" id="join-toggle-btn" type="button">링크 입력</button>
+          <button class="text-button" id="new-code-btn" type="button">새 코드</button>
         </div>
-      </form>
-      <div class="facts"><span>No account</span><span>No file server</span><span>Encrypted WebRTC</span></div>
-    </section>
-    <section class="workspace hidden" id="workspace-view">
-      <div class="room-card">
-        <div>
-          <p class="eyebrow" id="room-role">PRIVATE ROOM</p>
-          <h2 id="room-title">Waiting for another device</h2>
-          <p class="muted" id="room-detail">Keep this page open while the other device joins.</p>
-        </div>
-        <div class="room-actions" id="share-actions">
-          <button class="small-button" id="share-btn" type="button">Share link</button>
-          <button class="ghost-button" id="copy-btn" type="button">Copy</button>
-        </div>
-        <div class="session-box" id="session-box"><span>Session</span><code id="session-code">—</code></div>
-      </div>
-      <div class="peer-card">
-        <div class="peer-orb" id="peer-orb"></div>
-        <div class="peer-copy"><strong id="peer-state">Connecting…</strong><span id="peer-detail">Negotiating a WebRTC data channel</span></div>
-        <span class="path-badge" id="path-badge">—</span>
-      </div>
-      <section class="transfer-area hidden" id="transfer-area">
-        <label class="drop-zone" id="drop-zone" for="file-input">
-          <input id="file-input" type="file" hidden>
-          <span class="drop-icon">＋</span><strong>Choose a file</strong><small>or drop it here</small>
-        </label>
-        <article class="transfer-card hidden" id="transfer-card">
-          <div class="transfer-head">
-            <div><strong id="transfer-name">file</strong><span id="transfer-meta">—</span></div>
-            <span class="transfer-state" id="transfer-state">Preparing</span>
+        <form class="join-panel hidden" id="join-form">
+          <label for="join-input">전체 링크 또는 세션 키</label>
+          <div class="join-row">
+            <input id="join-input" autocomplete="off" autocapitalize="off" spellcheck="false" placeholder="연결 링크 붙여넣기" enterkeyhint="go">
+            <button class="small-button" type="submit">연결</button>
           </div>
-          <div class="progress-track"><div class="progress-bar" id="progress-bar"></div></div>
-          <div class="transfer-stats"><span id="progress-text">0%</span><span id="speed-text">—</span></div>
-          <div class="transfer-actions" id="transfer-actions"></div>
-        </article>
-        <article class="incoming-card hidden" id="incoming-card">
-          <div><p class="eyebrow">INCOMING FILE</p><strong id="incoming-name">—</strong><span id="incoming-meta">—</span></div>
-          <div class="incoming-actions">
-            <button class="small-button" id="accept-file-btn" type="button">Accept</button>
-            <button class="ghost-button" id="reject-file-btn" type="button">Decline</button>
-          </div>
-        </article>
+        </form>
+        <button class="subtle-link hidden" id="back-to-session-btn" type="button">연결 화면으로</button>
       </section>
-      <details class="technical">
-        <summary>Technical details</summary>
-        <div class="technical-grid">
-          <span>Signaling</span><code id="signaling-state">idle</code>
-          <span>WebRTC</span><code id="rtc-state">new</code>
-          <span>Data channel</span><code id="channel-state">closed</code>
-          <span>Storage sink</span><code id="sink-state">—</code>
+
+      <!-- Scene 2 — connection handshake or recovery -->
+      <section class="scene scene-connecting hidden" id="connection-view" aria-label="연결 상태" aria-live="polite">
+        <div class="connection-content">
+          <div class="connection-visual" aria-hidden="true">
+            <div class="connection-glow"></div>
+            <div class="connection-ring"></div>
+            <div class="peer-orb" id="peer-orb"></div>
+          </div>
+          <div class="connection-copy">
+            <h1 id="peer-state">연결 중</h1>
+            <p id="peer-detail">잠시만 기다려 주세요</p>
+          </div>
+          <span class="session-chip" id="connection-code">—</span>
         </div>
-        <pre id="debug-log" aria-live="polite"></pre>
-      </details>
-      <button class="leave-button" id="leave-btn" type="button">Leave session</button>
-    </section>
-    <section class="scanner-layer hidden" id="scanner-layer" role="dialog" aria-modal="true" aria-labelledby="scanner-title">
-      <div class="scanner-shell">
-        <div class="scanner-top"><h2 id="scanner-title">Scan shotbylove QR</h2><button class="icon-button" id="scan-close-btn" type="button" aria-label="Close scanner">×</button></div>
-        <div class="camera-stage">
-          <video id="qr-video" autoplay playsinline muted></video>
-          <div class="scan-reticle" aria-hidden="true"></div>
+        <div class="connection-actions">
+          <button class="secondary-action" id="back-to-qr-btn" type="button">QR 보기</button>
+          <button class="subtle-link" id="connection-new-btn" type="button">새 연결</button>
         </div>
-        <p id="scan-status" class="muted" aria-live="polite">Point the camera at a shotbylove QR code.</p>
-        <label class="ghost-button photo-scan">Choose a QR image<input id="scan-image-input" type="file" accept="image/*" hidden></label>
+        <div class="hidden" aria-hidden="true">
+          <span id="room-role"></span><span id="room-title"></span><span id="room-detail"></span>
+          <div id="share-actions"><button id="share-btn" type="button">Share</button><button id="copy-btn" type="button">Copy</button></div>
+          <span id="session-code"></span>
+        </div>
+      </section>
+
+      <!-- Scene 3 — file transfer after successful WebRTC connection -->
+      <section class="scene scene-transfer hidden" id="workspace-view" aria-label="파일 전송">
+        <div class="transfer-scene-head">
+          <div>
+            <p class="eyebrow">CONNECTED</p>
+            <h1>연결됨<span class="online-dot" aria-hidden="true"></span></h1>
+          </div>
+          <button class="icon-surface" id="transfer-qr-btn" type="button" aria-label="연결 QR 보기">▣</button>
+        </div>
+        <div class="transfer-area hidden" id="transfer-area">
+          <label class="drop-zone" id="drop-zone" for="file-input">
+            <input id="file-input" type="file" hidden>
+            <span class="drop-icon" aria-hidden="true">＋</span>
+            <strong>파일 선택</strong>
+            <small>또는 여기로 끌어놓기</small>
+          </label>
+          <article class="transfer-card hidden" id="transfer-card">
+            <div class="transfer-head">
+              <div><strong id="transfer-name">file</strong><span id="transfer-meta">—</span></div>
+              <span class="transfer-state" id="transfer-state">준비 중</span>
+            </div>
+            <div class="progress-track"><div class="progress-bar" id="progress-bar"></div></div>
+            <div class="transfer-stats"><span id="progress-text">0%</span><span id="speed-text">—</span></div>
+            <div class="transfer-actions" id="transfer-actions"></div>
+          </article>
+          <article class="incoming-card hidden" id="incoming-card">
+            <div><p class="eyebrow">받는 파일</p><strong id="incoming-name">—</strong><span id="incoming-meta">—</span></div>
+            <div class="incoming-actions">
+              <button class="small-button" id="accept-file-btn" type="button">받기</button>
+              <button class="ghost-button" id="reject-file-btn" type="button">거절</button>
+            </div>
+          </article>
+        </div>
+        <div class="transfer-bottom">
+          <div class="session-box"><span>세션</span><code id="transfer-session-code">—</code><span class="path-badge" id="path-badge">—</span></div>
+          <button class="leave-button" id="leave-btn" type="button">연결 종료</button>
+        </div>
+      </section>
+    </div>
+
+    <details class="technical" id="technical-details">
+      <summary>진단 정보</summary>
+      <div class="technical-grid">
+        <span>Signaling</span><code id="signaling-state">idle</code>
+        <span>WebRTC</span><code id="rtc-state">new</code>
+        <span>Data channel</span><code id="channel-state">closed</code>
+        <span>Storage</span><code id="sink-state">—</code>
       </div>
-    </section>
-    <section class="install-banner hidden" id="install-banner">
-      <div><strong>Install shotbylove</strong><span id="install-copy">Keep it one tap away.</span></div>
-      <button class="small-button" id="install-btn" type="button">Install</button>
-      <button class="icon-button" id="install-dismiss" type="button" aria-label="Dismiss">×</button>
-    </section>
-    <footer>
-      <span>v0.2.0 · experimental</span>
-      <a href="https://github.com/EnzoLisianthus/shotbylove" target="_blank" rel="noreferrer">GitHub ↗</a>
-    </footer>
+      <pre id="debug-log" aria-live="off"></pre>
+    </details>
+    <footer><span>v0.3.0</span><a href="https://github.com/EnzoLisianthus/shotbylove" target="_blank" rel="noreferrer">GitHub</a></footer>
   </main>
-  <script defer src="./vendor/qrcode.min.js?v=0.2.0"></script>
-  <script defer src="./vendor/jsQR.js?v=0.2.0"></script>
-  <script type="module" src="./src/app.js?v=0.2.0"></script>
+
+  <section class="scanner-layer hidden" id="scanner-layer" role="dialog" aria-modal="true" aria-labelledby="scanner-title">
+    <div class="scanner-shell">
+      <header class="scanner-top">
+        <button class="icon-button" id="scan-close-btn" type="button" aria-label="스캐너 닫기">‹</button>
+        <h2 id="scanner-title">QR 스캔</h2>
+        <span aria-hidden="true" class="scanner-placeholder"></span>
+      </header>
+      <div class="camera-stage">
+        <video id="qr-video" autoplay playsinline muted></video>
+        <div class="scan-reticle" aria-hidden="true"></div>
+      </div>
+      <p id="scan-status" class="muted" aria-live="polite">QR 코드를 비춰주세요</p>
+      <label class="secondary-action photo-scan">사진에서 선택<input id="scan-image-input" type="file" accept="image/*" hidden></label>
+    </div>
+  </section>
+
+  <section class="install-banner hidden" id="install-banner">
+    <div><strong>홈 화면에 추가</strong><span id="install-copy">앱처럼 바로 실행할 수 있습니다</span></div>
+    <button class="small-button" id="install-btn" type="button">설치</button>
+    <button class="icon-button" id="install-dismiss" type="button" aria-label="닫기">×</button>
+  </section>
+  <script defer src="./vendor/qrcode.min.js?v=0.3.0"></script>
+  <script defer src="./vendor/jsQR.js?v=0.3.0"></script>
+  <script type="module" src="./src/app.js?v=0.3.0"></script>
 </body>
 </html>
