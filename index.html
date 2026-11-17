@@ -12,7 +12,7 @@
   <link rel="manifest" href="./manifest.webmanifest">
   <link rel="icon" href="./icon.svg" type="image/svg+xml">
   <title>shotbylove · P2P file transfer</title>
-  <link rel="stylesheet" href="./style.css?v=0.1.4">
+  <link rel="stylesheet" href="./style.css?v=0.2.0">
 </head>
 <body>
   <main class="shell">
@@ -24,25 +24,34 @@
       <div class="status-pill" id="global-status">ready</div>
     </header>
     <section class="hero" id="home-view">
-      <p class="eyebrow">PRIVATE P2P TRANSFER</p>
-      <h1>Send files.<br><span>Not uploads.</span></h1>
-      <p class="lede">Files move directly between browsers over WebRTC. This v0 uses a temporary public signaling transport only to introduce the two peers.</p>
-      <div class="action-grid">
-        <button class="action-card primary" id="create-room-btn" type="button">
-          <span class="action-icon">↑</span><span><strong>Create transfer</strong><small>Make a private room and share its link</small></span>
-        </button>
-        <button class="action-card" id="join-toggle-btn" type="button">
-          <span class="action-icon">↓</span><span><strong>Join transfer</strong><small>Paste a room link or session key</small></span>
-        </button>
+      <p class="eyebrow">DIRECT · PRIVATE · PEER TO PEER</p>
+      <h1>One scan.<br><span>Connected.</span></h1>
+      <p class="lede">Scan to pair two devices and transfer files directly. Both devices can send and receive.</p>
+      <div class="pairing-card">
+        <div class="qr-frame"><div id="qr-display" role="img" aria-label="QR code to join this transfer session"></div></div>
+        <div class="pairing-info">
+          <p class="eyebrow">YOUR SESSION</p>
+          <strong class="pairing-code" id="home-session-code">Generating…</strong>
+          <p class="muted pairing-status" id="pairing-status" aria-live="polite">Preparing a private session</p>
+          <button class="scan-button" id="scan-qr-btn" type="button"><span aria-hidden="true">▣</span> Scan QR code</button>
+          <div class="pairing-actions">
+            <button class="ghost-button" id="home-share-btn" type="button">Share link</button>
+            <button class="ghost-button" id="home-copy-btn" type="button">Copy link</button>
+          </div>
+        </div>
+      </div>
+      <div class="extra-actions">
+        <button class="text-button" id="join-toggle-btn" type="button">Enter a session link or key</button>
+        <button class="text-button" id="new-code-btn" type="button">New session code</button>
       </div>
       <form class="join-panel hidden" id="join-form">
-        <label for="join-input">Room link or session key</label>
+        <label for="join-input">Paste a full link or session key (not the short display code)</label>
         <div class="join-row">
-          <input id="join-input" autocomplete="off" autocapitalize="off" spellcheck="false" placeholder="Paste link or key">
-          <button class="small-button" type="submit">Join</button>
+          <input id="join-input" autocomplete="off" autocapitalize="off" spellcheck="false" placeholder="Paste link or 22-character key">
+          <button class="small-button" type="submit">Connect</button>
         </div>
       </form>
-      <div class="facts"><span>No account</span><span>No file storage</span><span>End-to-end WebRTC encryption</span></div>
+      <div class="facts"><span>No account</span><span>No file server</span><span>Encrypted WebRTC</span></div>
     </section>
     <section class="workspace hidden" id="workspace-view">
       <div class="room-card">
@@ -96,16 +105,29 @@
       </details>
       <button class="leave-button" id="leave-btn" type="button">Leave session</button>
     </section>
+    <section class="scanner-layer hidden" id="scanner-layer" role="dialog" aria-modal="true" aria-labelledby="scanner-title">
+      <div class="scanner-shell">
+        <div class="scanner-top"><h2 id="scanner-title">Scan shotbylove QR</h2><button class="icon-button" id="scan-close-btn" type="button" aria-label="Close scanner">×</button></div>
+        <div class="camera-stage">
+          <video id="qr-video" autoplay playsinline muted></video>
+          <div class="scan-reticle" aria-hidden="true"></div>
+        </div>
+        <p id="scan-status" class="muted" aria-live="polite">Point the camera at a shotbylove QR code.</p>
+        <label class="ghost-button photo-scan">Choose a QR image<input id="scan-image-input" type="file" accept="image/*" hidden></label>
+      </div>
+    </section>
     <section class="install-banner hidden" id="install-banner">
       <div><strong>Install shotbylove</strong><span id="install-copy">Keep it one tap away.</span></div>
       <button class="small-button" id="install-btn" type="button">Install</button>
       <button class="icon-button" id="install-dismiss" type="button" aria-label="Dismiss">×</button>
     </section>
     <footer>
-      <span>v0.1.4 · experimental</span>
+      <span>v0.2.0 · experimental</span>
       <a href="https://github.com/EnzoLisianthus/shotbylove" target="_blank" rel="noreferrer">GitHub ↗</a>
     </footer>
   </main>
-  <script type="module" src="./src/app.js?v=0.1.4"></script>
+  <script defer src="./vendor/qrcode.min.js?v=0.2.0"></script>
+  <script defer src="./vendor/jsQR.js?v=0.2.0"></script>
+  <script type="module" src="./src/app.js?v=0.2.0"></script>
 </body>
 </html>
