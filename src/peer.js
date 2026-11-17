@@ -19,8 +19,8 @@ export class PeerSession extends EventTarget{
     signaling.addEventListener("message",this.boundSignal);
 
     this.pc.addEventListener("icecandidate",event=>{
-      if(event.candidate&&this.remoteId&&!this.closed){
-        this.signaling.send("ice",{to:this.remoteId,candidate:event.candidate.toJSON()})
+      if(event.candidate&&this.remoteId&&this.remoteEpoch&&!this.closed){
+        this.signaling.send("ice",{to:this.remoteId,toEpoch:this.remoteEpoch,epoch:this.epoch,candidate:event.candidate.toJSON()})
           .catch(error=>this.fail(error));
       }
     });
@@ -71,13 +71,17 @@ export class PeerSession extends EventTarget{
       return;
     }
 
-    // Each SDP and ICE message must be addressed to this particular browser instance.
-    if(payload.to!==this.signaling.clientId)return;
+    // Target both the browser tab and this exact connection attempt.
+    // An ICE/SDP envelope from a previous RTCPeerConnection must be ignored.
+    if(payload.to!==this.signaling.clientId||payload.toEpoch!==this.epoch)return;
+    if(typeof payload.epoch!=="string")return;
     if(this.remoteId&&this.remoteId!==from)return;
+    if(this.remoteEpoch&&this.remoteEpoch!==payload.epoch)return;
     if(!this.remoteId){
       this.remoteId=from;
       this.dispatchEvent(new CustomEvent("peer-seen",{detail:null}));
     }
+    this.remoteEpoch=payload.epoch;
 
     switch(message.type){
       case"offer":{
@@ -86,7 +90,7 @@ export class PeerSession extends EventTarget{
         await this.flushCandidates();
         const answer=await this.pc.createAnswer();
         await this.pc.setLocalDescription(answer);
-        await this.signaling.send("answer",{to:from,description:this.pc.localDescription.toJSON()});
+        await this.signaling.send("answer",{to:from,toEpoch:this.remoteEpoch,epoch:this.epoch,description:this.pc.localDescription.toJSON()});
         break;
       }
       case"answer":
@@ -108,7 +112,7 @@ export class PeerSession extends EventTarget{
     this.bindChannel(this.pc.createDataChannel("shotbylove-files",{ordered:true}));
     const offer=await this.pc.createOffer();
     await this.pc.setLocalDescription(offer);
-    await this.signaling.send("offer",{to:this.remoteId,description:this.pc.localDescription.toJSON()});
+    await this.signaling.send("offer",{to:this.remoteId,toEpoch:this.remoteEpoch,epoch:this.epoch,description:this.pc.localDescription.toJSON()});
   }
 
   async flushCandidates(){
