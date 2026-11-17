@@ -22,8 +22,10 @@ export class TransferManager extends EventTarget{
     this.incoming=null;
     this.outgoing=null;
     this.messageQueue=Promise.resolve();
+    this.disposed=false;
 
     channel.addEventListener("message",event=>{
+      if(this.disposed)return;
       const data=event.data;
       this.messageQueue=this.messageQueue
         .then(()=>this.onMessage(data))
@@ -31,9 +33,19 @@ export class TransferManager extends EventTarget{
     });
   }
 
-  emit(type,detail){this.dispatchEvent(new CustomEvent(type,{detail}))}
+  emit(type,detail){if(!this.disposed)this.dispatchEvent(new CustomEvent(type,{detail}))}
+
+  async dispose(){
+    this.disposed=true;
+    if(this.outgoing)this.outgoing.cancelled=true;
+    const incoming=this.incoming;
+    this.incoming=null;
+    this.outgoing=null;
+    if(incoming?.sink)await incoming.sink.abort();
+  }
 
   async onMessage(data){
+    if(this.disposed)return;
     if(typeof data==="string"){
       await this.onControl(JSON.parse(data));
       return;
@@ -182,7 +194,7 @@ export class TransferManager extends EventTarget{
     state.startedAt=performance.now();
 
     while(state.offset<state.file.size){
-      if(state.cancelled){this.outgoing=null;return}
+      if(state.cancelled||this.disposed){this.outgoing=null;return}
       if(this.channel.readyState!=="open")throw new Error("Data channel closed during transfer.");
 
       await this.waitForDrain();
