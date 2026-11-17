@@ -1,25 +1,31 @@
-# Protocol v0
+# Protocol v0.2.0
 
-The v0 protocol uses one ordered reliable WebRTC DataChannel.
+## Signaling
 
-Text frames are JSON control messages. Binary frames are payload chunks for the currently accepted incoming file.
+Protocol envelope version `v=2`. Messages contain `v`, `room`, `from`, `seq`, `ts`, `type`, `payload` and `sig`. HMAC-SHA256 signs the ordered envelope fields. Timestamp rejects messages older than two minutes (assuming reasonably synchronized device clocks). Duplicate sequence numbers per sender are ignored, without assuming that asynchronous signature verification preserves arrival order.
 
-## Control messages
+- `hello`: room presence, local device identifier, optional response marker
+- `offer`: targeted RTCSessionDescription
+- `answer`: targeted RTCSessionDescription
+- `ice`: targeted ICE candidate
 
-- file-offer: announces name, size, MIME type, lastModified, transfer UUID and chunk size
-- file-accept: receiver has prepared storage and authorizes transfer
-- file-reject: receiver declines or is busy
-- file-done: sender has enqueued all file bytes
-- cancel: either side cancels the active transfer
+A short display label does not grant access. Only the full 128-bit secret does.
 
-The receiver checks that the final received byte count exactly matches the announced file size before exposing the download.
+## File transfer
 
-## v0 limitations
+One ordered reliable WebRTC DataChannel is used. Text frames are JSON control messages, and binary frames are payload chunks for the accepted incoming file.
 
-- one outbound file per peer at a time
-- no resume offset negotiation
-- no whole-file cryptographic checksum yet
-- completion validates byte count only
-- binary chunks carry no per-chunk header because only one inbound file is active at a time
+- `file-offer`: file metadata and transfer UUID
+- `file-accept`: receiver authorizes the file after preparing storage
+- `file-reject`: receiver refuses or is busy
+- `file-done`: sender queued every byte
+- `file-received`: receiver finished storing and verified the byte count
+- `cancel`: cancel the active transfer
 
-These limits are explicit so later protocol versions can evolve cleanly.
+## Limits
+
+- One concurrent outbound file per peer
+- Interrupted transfers are discarded, not resumed
+- No whole-file cryptographic checksum yet
+- Completion validates the byte count and receipt acknowledgment
+- Only two participants are supported per session
