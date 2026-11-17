@@ -4,10 +4,12 @@
 
 Protocol envelope version `v=2`. Messages contain `v`, `room`, `from`, `seq`, `ts`, `type`, `payload` and `sig`. HMAC-SHA256 signs the ordered envelope fields. Timestamp rejects messages older than two minutes (assuming reasonably synchronized device clocks). Duplicate sequence numbers per sender are ignored, without assuming that asynchronous signature verification preserves arrival order.
 
-- `hello`: room presence, local device identifier, optional response marker
+- `hello`: room presence, local device identifier, optional response marker, and a fresh connection-attempt epoch
 - `offer`: targeted RTCSessionDescription
 - `answer`: targeted RTCSessionDescription
 - `ice`: targeted ICE candidate
+
+Offer/answer/ICE envelopes carry both sender `epoch` and receiver `toEpoch` so stale packets from an earlier RTCPeerConnection are rejected even if the browser tab ID has not changed.
 
 A short display label does not grant access. Only the full 128-bit secret does.
 
