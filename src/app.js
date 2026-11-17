@@ -27,7 +27,7 @@ function showScene(next,{manual=false,force=false}={}){
   ui.shell.dataset.scene=next;
   const canReturn=Boolean(peer?.remoteId||peer?.channel?.readyState==="open"||hasDiscoveredPeer);
   ui.backToSession.classList.toggle("hidden",!canReturn);
-  window.scrollTo?.({top:0,behavior:"instant"});
+  window.scrollTo?.(0,0);
 }
 function showQrManually(){showScene("pair",{manual:true,force:true})}
 function returnToSession(){
@@ -205,7 +205,7 @@ function makePeer(){
     clearTimeout(recoveryTimer);recoveryTimer=null;clearTimeout(watchdog);watchdog=null;
     await disposeTransfers();if(!valid())return;
     ui.channelState.textContent="open";ui.transferArea.classList.remove("hidden");
-    ui.peerOrb.className="peer-orb online";ui.status.textContent="connected";
+    ui.peerOrb.className="peer-orb online";ui.status.textContent="연결됨";
     ui.peerState.textContent="연결됨";ui.peerDetail.textContent="";
     ui.pairingStatus.textContent="연결됨";
     showScene("transfer");
@@ -260,7 +260,7 @@ async function beginSession(input,{join=false}={}){
   s.addEventListener("state",event=>{
     if(stamp!==generation||signaling!==s)return;
     ui.signalingState.textContent=event.detail;log("signaling: "+event.detail);
-    if(event.detail==="connected"&&peer?.channel?.readyState!=="open")peer.announce().catch(e=>log(e.message));
+    if(event.detail==="connected"&&peer&&peer.channel?.readyState!=="open")peer.announce().catch(e=>log(e.message));
     if(event.detail==="reconnecting"&&peer?.channel?.readyState!=="open")
       ui.pairingStatus.textContent="서버 재연결 중";
   });
