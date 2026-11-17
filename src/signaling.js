@@ -55,9 +55,13 @@ export class NtfySignaling extends EventTarget{
         if(typeof message.from!=="string"||!Number.isSafeInteger(message.seq)||message.seq<=0)return;
         const expected=await hmac(this.secret,canonical(message));
         if(expected!==message.sig||this.closed)return;
-        const last=this.seen.get(message.from)||0;
-        if(message.seq<=last)return;
-        this.seen.set(message.from,message.seq);
+        // HMAC checks finish asynchronously; do not discard valid lower sequence
+        // numbers merely because a later ICE message was verified first.
+        let sequenceSet=this.seen.get(message.from);
+        if(!sequenceSet){sequenceSet=new Set();this.seen.set(message.from,sequenceSet)}
+        if(sequenceSet.has(message.seq))return;
+        sequenceSet.add(message.seq);
+        if(sequenceSet.size>256)sequenceSet.delete(sequenceSet.values().next().value);
         if(this.seen.size>64)this.seen.delete(this.seen.keys().next().value);
         this.dispatchEvent(new CustomEvent("message",{detail:message}));
       }catch{}
