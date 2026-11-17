@@ -1,52 +1,46 @@
 # shotbylove
 
-Browser-first peer-to-peer file transfer.
+QR-first, browser-to-browser file transfer.
 
-**The file should not be uploaded to the application server.** The page introduces two browsers, establishes an encrypted WebRTC data channel, and moves file chunks directly between them whenever network topology allows it.
+Open **https://enzolisianthus.github.io/shotbylove/**. A pairing QR and **Scan QR code** button appear immediately. Scan the QR on another device (using its normal camera or the in-app scanner), and both devices join the same session automatically. No account, host selection, or separate room creation step is needed.
 
-## v0
+## v0.2.0 features
 
-This is an architectural test build:
+- QR code on the home screen, with built-in camera and image QR scanning
+- automatic session creation and immediate joining from `#join/<secret>` links
+- the same private session link saved locally for reopening/reconnecting
+- a stable, locally generated device identifier to recognize a returning device
+- symmetric peer discovery: either device can create the WebRTC offer
+- reconnect the WebRTC session when the peer leaves, reconnects, or the data channel fails
+- WebRTC DataChannel, chunking/backpressure, per-file consent, progress, OPFS sink and memory fallback
+- copy/share link, installable PWA, and QR assets bundled locally
 
-- GitHub Pages static frontend
-- installable PWA shell
-- 128-bit session secrets stored in the URL fragment
-- HMAC-authenticated signaling envelopes
-- WebRTC DataChannel
-- chunked file transfer
-- RTCDataChannel backpressure
-- receiver approval before transfer
-- OPFS streaming receive sink when available
-- memory fallback for smaller files
-- progress and throughput display
-- native Share API and copyable join link
+The short code displayed on screen is a **visual session label**, not a join key. To join manually, paste the **full link** or **22-character secret**. A displayed QR encodes the full link.
 
-### Temporary signaling transport
+### How reconnect works
 
-v0 uses the public ntfy.sh service only as a signaling bus. The room topic is derived from a SHA-256 hash of the session secret, and signaling envelopes are authenticated with HMAC-SHA256 using that secret. The secret itself stays in the URL fragment.
+Both devices keep the same secret while in the session. If one goes offline or reloads, the remaining browser waits with the same QR. When the other device returns with that link, the browsers renegotiate WebRTC. The original sender/receiver role does not matter.
 
-**File bytes are never published to ntfy.**
+**An interrupted file must currently be selected and sent again.** This release reconnects the peer connection; it does not resume a partly transferred file.
 
-The signaling layer is deliberately replaceable. A later version will use a dedicated service while the P2P transfer layer stays independent.
+### Temporary signaling and network limits
 
-### Current network limitation
+GitHub Pages only hosts static assets. The public `ntfy.sh` service exchanges HMAC-authenticated hello/offer/answer/ICE messages; file contents are not published there. Presence announcements happen at join/rejoin, not as a high-frequency background heartbeat. This is important because the public service enforces usage limits.
 
-v0 has STUN but no TURN relay. Restrictive NAT/firewall combinations can therefore fail to connect. TURN is part of the production architecture.
+There is **STUN but no TURN relay**. Some NAT/firewall/mobile-network combinations will still fail regardless of reconnect attempts. A dedicated signaling service and TURN are needed for production-level connection reliability.
 
-## Run locally
+Session URLs/QRs are bearer secrets; anyone who possesses them can join. The secret is also kept in this browser's local storage so the session can be reopened.
 
-Serve the repository over HTTP(S), not file://.
+### Run locally
 
-\`\`\`bash
+Serve the repository over HTTP(S), not `file://`:
+
+```bash
 python -m http.server 8080
-\`\`\`
+```
 
-For cross-device testing, use the deployed HTTPS GitHub Pages site.
+Cross-device camera pairing requires a secure context, so use the deployed HTTPS Pages site. QR libraries are included under `vendor/` with their respective licenses.
 
-- Architecture: docs/ARCHITECTURE.md
-- Protocol: docs/PROTOCOL.md
-- Security: docs/SECURITY.md
+See `docs/ARCHITECTURE.md`, `docs/PROTOCOL.md` and `docs/SECURITY.md`.
 
-## Status
-
-Experimental v0. Do not depend on this build for the only copy of important data.
+**Status:** Experimental v0.2.0. Do not rely on this build for the only copy of important data.

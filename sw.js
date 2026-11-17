@@ -1,15 +1,17 @@
-const CACHE="shotbylove-v0.1.4-shell";
+const CACHE="shotbylove-v0.2.0-shell";
 const CORE=[
   "./",
   "./index.html",
-  "./style.css?v=0.1.4",
+  "./style.css?v=0.2.0",
   "./manifest.webmanifest",
   "./icon.svg",
-  "./src/app.js?v=0.1.4",
-  "./src/signaling.js?v=0.1.4",
-  "./src/peer.js?v=0.1.4",
-  "./src/transfer.js?v=0.1.4",
-  "./src/storage.js"
+  "./src/app.js?v=0.2.0",
+  "./src/signaling.js?v=0.2.0",
+  "./src/peer.js?v=0.2.0",
+  "./src/transfer.js?v=0.2.0",
+  "./src/storage.js",
+  "./vendor/qrcode.min.js?v=0.2.0",
+  "./vendor/jsQR.js?v=0.2.0"
 ];
 
 self.addEventListener("install",event=>{
@@ -50,6 +52,7 @@ self.addEventListener("fetch",event=>{
 
   const isMutableAsset=
     url.pathname.includes("/src/") ||
+    url.pathname.includes("/vendor/") ||
     url.pathname.endsWith(".css") ||
     url.pathname.endsWith(".webmanifest");
 

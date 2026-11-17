@@ -1,40 +1,37 @@
-# Architecture
+# Architecture (v0.2.0)
 
 ## Static application
 
-GitHub Pages hosts only static files. It does not run a signaling server, TURN server, file store, or authentication backend.
+GitHub Pages serves static HTML, CSS, JavaScript, QR libraries and the PWA service worker. No files are stored on the application server.
 
-All deployed paths are relative so the application works under the project path /shotbylove/.
+## QR-first pairing and session persistence
 
-## Session establishment
+1. On first visit, the browser generates a random 128-bit secret, keeps it in local storage and immediately renders a QR for `#join/<secret>`.
+2. A second browser scans the QR (external camera or bundled in-app scanner). The link immediately opens the same session.
+3. A short display label is derived from SHA-256, but only the full secret or link can be used to join.
+4. Each browser has a persistent local device identifier and a fresh random signaling client ID per tab.
+5. Both browsers derive the same `ntfy.sh` topic and authenticate signaling envelopes with HMAC-SHA256.
+6. Each browser announces its presence. An existing browser replies once to a new announcement.
+7. The lexicographically smaller active client ID makes the Offer; the other answers. There is no durable host/guest role.
+8. Targeted SDP/ICE messages are addressed to the active client ID.
+9. After the DataChannel opens, files move over the WebRTC peer-to-peer connection.
 
-1. Host generates a cryptographically random 128-bit session secret.
-2. The secret is placed only in the URL fragment.
-3. Both clients derive the same signaling topic from SHA-256 of the secret.
-4. Each signaling message is authenticated with HMAC-SHA256 using the original secret.
-5. The guest announces itself.
-6. The host creates the WebRTC offer.
-7. Offer, answer and ICE candidates pass through the signaling adapter.
-8. Once the DataChannel is open, file data no longer uses signaling.
+## Reconnection
 
-## v0 signaling adapter
+On RTC failure, disconnection or channel close, the browser discards its former RTCPeerConnection and any incomplete transfer sink, retains the session secret and initiates another handshake. A remaining browser does not endlessly publish presence messages; it listens for a newly joined browser.
 
-NtfySignaling is a temporary transport adapter using ntfy.sh SSE plus its publish API. It lets a GitHub Pages-only v0 be exercised on real devices before a dedicated backend exists.
+Reloading a device preserves the locally stored secret and device identifier. A new tab ID differentiates old and new negotiations. An intentionally selected new code starts a separate room.
 
-## Data plane
+Browser sleep/background policies, signaling service unavailability and NAT restrictions can prevent timely reconnection.
 
-The data plane is a reliable ordered RTCDataChannel.
+## Transfer plane
 
-The sender slices the File, limits chunk size, watches bufferedAmount, pauses above a high-water mark, and resumes after bufferedamountlow.
+The transfer protocol remains ordered/reliable RTCDataChannel binary chunks plus JSON control frames. File transfer interruption requires resend; offset resume is not implemented.
 
-The receiver prefers OPFS as a streaming temporary sink and falls back to memory only when needed.
+## Planned production work
 
-## Production additions
-
-- dedicated signaling service
-- TURN with short-lived credentials
-- resumable transfers
-- multi-file and folder manifests
-- end-to-end content hash verification
-- connection recovery
-- compatibility test matrix
+- Dedicated signaling service and presence management
+- Authenticated TURN relay with short-lived credentials
+- Transfer checkpoint and resumable chunk protocol
+- File integrity hash verification
+- Browser/device compatibility tests
