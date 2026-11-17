@@ -52,6 +52,8 @@ export class PeerSession extends EventTarget{
         this.remoteId=from;
         this.remoteDeviceId=typeof payload.device==="string"?payload.device:null;
         this.dispatchEvent(new CustomEvent("peer-seen",{detail:this.remoteDeviceId}));
+      }else if(!this.remoteDeviceId&&typeof payload.device==="string"){
+        this.remoteDeviceId=payload.device;
       }
       if(!payload.reply)this.announce(true).catch(error=>this.fail(error));
       if(this.signaling.clientId<from&&!this.offerStarted)await this.startOffer();
