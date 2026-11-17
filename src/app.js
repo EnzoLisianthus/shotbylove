@@ -403,15 +403,7 @@ document.addEventListener("visibilitychange",()=>{
 window.addEventListener("beforeinstallprompt",event=>{event.preventDefault();deferredInstallPrompt=event;ui.installBanner.classList.remove("hidden")});
 ui.installBtn.addEventListener("click",async()=>{if(deferredInstallPrompt){deferredInstallPrompt.prompt();await deferredInstallPrompt.userChoice;deferredInstallPrompt=null;ui.installBanner.classList.add("hidden")}});
 ui.installDismiss.addEventListener("click",()=>ui.installBanner.classList.add("hidden"));
-function maybeShowIosInstallHint(){
-  const ios=/iPad|iPhone|iPod/.test(navigator.userAgent),standalone=navigator.standalone===true||matchMedia("(display-mode: standalone)").matches;
-  if(ios&&!standalone&&false&&!sessionStorage.getItem("sbl-install-dismissed")){
-    ui.installCopy.textContent="Safari 공유 → 홈 화면에 추가";ui.installBtn.classList.add("hidden");
-    ui.installBanner.classList.remove("hidden");
-    ui.installDismiss.onclick=()=>{sessionStorage.setItem("sbl-install-dismissed","1");ui.installBanner.classList.add("hidden")};
-  }
-}
 async function registerServiceWorker(){if(!("serviceWorker"in navigator))return;try{const r=await navigator.serviceWorker.register("./sw.js",{updateViaCache:"none"});r.update().catch(()=>{})}catch(e){log("service worker: "+e.message)}}
-log("build v0.3.0");registerServiceWorker();maybeShowIosInstallHint();
+log("build v0.3.0");registerServiceWorker();
 const inviteKey=normalizeSessionInput(location.hash);
 beginSession(inviteKey||normalizeSessionInput(saved(SAVE_KEY))||createSessionSecret(),{join:Boolean(inviteKey)});
