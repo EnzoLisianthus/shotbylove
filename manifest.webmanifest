@@ -1,13 +1,38 @@
 {
-  "name": "shotbylove · P2P file transfer",
+  "name": "shotbylove",
   "short_name": "shotbylove",
-  "description": "Private peer-to-peer file transfer in your browser.",
+  "description": "QR로 연결하는 P2P 파일 전송",
   "id": "./",
   "start_url": "./",
   "scope": "./",
   "display": "standalone",
+  "display_override": [
+    "standalone"
+  ],
   "background_color": "#0b0d10",
   "theme_color": "#0b0d10",
-  "icons": [{"src":"./icon.svg","sizes":"any","type":"image/svg+xml","purpose":"any maskable"}],
-  "categories": ["utilities", "productivity"]
+  "icons": [
+    {
+      "src": "./icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "./icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "./icon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any"
+    }
+  ],
+  "categories": [
+    "utilities",
+    "productivity"
+  ]
 }
