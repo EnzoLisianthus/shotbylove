@@ -341,10 +341,11 @@ ui.joinForm.addEventListener("submit",event=>{
 ui.newCode.addEventListener("click",()=>{history.replaceState(null,"",location.pathname+location.search);beginSession(createSessionSecret())});
 ui.scan.addEventListener("click",openScanner);
 ui.scannerClose.addEventListener("click",stopScanner);
+document.addEventListener("keydown",event=>{if(event.key==="Escape"&&scannerOpen)stopScanner()});
 ui.scannerImage.addEventListener("change",()=>scanImage(ui.scannerImage.files?.[0]));
 ui.homeShare.addEventListener("click",shareLink);ui.homeCopy.addEventListener("click",()=>copyLink(ui.homeCopy));
 ui.share.addEventListener("click",shareLink);ui.copy.addEventListener("click",()=>copyLink(ui.copy));
-ui.fileInput.addEventListener("change",()=>sendFile(ui.fileInput.files?.[0]));
+ui.fileInput.addEventListener("change",()=>{const file=ui.fileInput.files?.[0];ui.fileInput.value="";sendFile(file)});
 for(const type of["dragenter","dragover"])ui.dropZone.addEventListener(type,event=>{event.preventDefault();ui.dropZone.classList.add("drag")});
 for(const type of["dragleave","drop"])ui.dropZone.addEventListener(type,event=>{event.preventDefault();ui.dropZone.classList.remove("drag")});
 ui.dropZone.addEventListener("drop",event=>sendFile(event.dataTransfer?.files?.[0]));
